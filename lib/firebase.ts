@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
-import { getStorage } from "firebase/storage"
+import { initializeApp, getApps, getApp } from "firebase/app"
+import { getAuth, connectAuthEmulator } from "firebase/auth"
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore"
+import { getStorage, connectStorageEmulator } from "firebase/storage"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,11 +13,33 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
 
 // Initialize Firebase services
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
+
+// Connect to emulators in development
+if (process.env.NODE_ENV === "development") {
+  try {
+    // Connect to Auth emulator
+    if (!auth.config.emulator) {
+      connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true })
+    }
+
+    // Connect to Firestore emulator
+    if (!db._delegate._databaseId.projectId.includes("demo-")) {
+      connectFirestoreEmulator(db, "localhost", 8080)
+    }
+
+    // Connect to Storage emulator
+    if (!storage._delegate._host.includes("localhost")) {
+      connectStorageEmulator(storage, "localhost", 9199)
+    }
+  } catch (error) {
+    console.log("Firebase emulators already connected or not available")
+  }
+}
 
 export default app
