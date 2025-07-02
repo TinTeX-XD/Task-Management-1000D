@@ -6,10 +6,12 @@ import {
   type User,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
+  createUserWithEmailAndPassword,
 } from "firebase/auth"
 import { auth } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface AuthContextType {
   user: User | null
@@ -24,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,22 +34,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => unsubscribe()
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password)
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+      toast.success("Successfully signed in!")
+      router.push("/dashboard")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in")
+      throw error
+    }
   }
 
   const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password)
+    try {
+      await createUserWithEmailAndPassword(auth, email, password)
+      toast.success("Account created successfully!")
+      router.push("/dashboard")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create account")
+      throw error
+    }
   }
 
   const logout = async () => {
-    await signOut(auth)
+    try {
+      await signOut(auth)
+      toast.success("Successfully signed out!")
+      router.push("/login")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign out")
+      throw error
+    }
   }
 
-  return <AuthContext.Provider value={{ user, loading, signIn, signUp, logout }}>{children}</AuthContext.Provider>
+  const value = {
+    user,
+    loading,
+    signIn,
+    signUp,
+    logout,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
