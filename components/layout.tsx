@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
@@ -13,25 +13,12 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, loading } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-
-  useEffect(() => {
-    // Load sidebar state from localStorage
-    const savedState = localStorage.getItem("sidebar-open")
-    if (savedState !== null) {
-      setSidebarOpen(JSON.parse(savedState))
-    }
-  }, [])
-
-  useEffect(() => {
-    // Save sidebar state to localStorage
-    localStorage.setItem("sidebar-open", JSON.stringify(sidebarOpen))
-  }, [sidebarOpen])
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
@@ -42,11 +29,13 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+    <div className="min-h-screen bg-background">
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <div className="lg:pl-72">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="py-6">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
+        </main>
       </div>
     </div>
   )

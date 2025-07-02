@@ -1,40 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Plus, Search, Download, Eye, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Download, Eye, Trash2, Search } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
+import jsPDF from "jspdf"
 
 interface Invoice {
   id: string
   invoiceNumber: string
-  title: string
-  client: {
-    name: string
-    email: string
-    company?: string
-  }
-  project?: {
-    name: string
-  }
-  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED"
+  clientName: string
+  projectName: string
   amount: number
-  taxAmount: number
-  totalAmount: number
+  status: "draft" | "sent" | "paid" | "overdue"
   dueDate: string
   createdAt: string
   items: InvoiceItem[]
@@ -48,284 +34,214 @@ interface InvoiceItem {
   amount: number
 }
 
-interface Client {
-  id: string
-  name: string
-  email: string
-  company?: string
-}
-
 interface Project {
   id: string
   name: string
-  clientId: string
+  clientName: string
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: "1",
-    invoiceNumber: "INV-001",
-    title: "Website Development",
-    client: {
-      name: "John Doe",
-      email: "john@example.com",
-      company: "Acme Corp",
-    },
-    project: {
-      name: "E-commerce Website",
-    },
-    status: "SENT",
-    amount: 5000,
-    taxAmount: 500,
-    totalAmount: 5500,
-    dueDate: "2024-02-15",
-    createdAt: "2024-01-15",
-    items: [
-      {
-        id: "1",
-        description: "Frontend Development",
-        quantity: 40,
-        rate: 100,
-        amount: 4000,
-      },
-      {
-        id: "2",
-        description: "Backend Integration",
-        quantity: 10,
-        rate: 100,
-        amount: 1000,
-      },
-    ],
-  },
-  {
-    id: "2",
-    invoiceNumber: "INV-002",
-    title: "Mobile App Development",
-    client: {
-      name: "Jane Smith",
-      email: "jane@example.com",
-      company: "Tech Solutions",
-    },
-    status: "PAID",
-    amount: 8000,
-    taxAmount: 800,
-    totalAmount: 8800,
-    dueDate: "2024-01-30",
-    createdAt: "2024-01-01",
-    items: [
-      {
-        id: "3",
-        description: "iOS App Development",
-        quantity: 60,
-        rate: 120,
-        amount: 7200,
-      },
-      {
-        id: "4",
-        description: "Testing & QA",
-        quantity: 10,
-        rate: 80,
-        amount: 800,
-      },
-    ],
-  },
-]
-
-const mockClients: Client[] = [
-  { id: "1", name: "John Doe", email: "john@example.com", company: "Acme Corp" },
-  { id: "2", name: "Jane Smith", email: "jane@example.com", company: "Tech Solutions" },
-]
-
-const mockProjects: Project[] = [
-  { id: "1", name: "E-commerce Website", clientId: "1" },
-  { id: "2", name: "Mobile App", clientId: "2" },
-]
-
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices)
-  const [clients, setClients] = useState<Client[]>(mockClients)
-  const [projects, setProjects] = useState<Project[]>(mockProjects)
+  const { user } = useAuth()
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
-    title: "",
-    clientId: "",
     projectId: "",
     dueDate: "",
-    taxRate: 10,
+    notes: "",
     items: [{ description: "", quantity: 1, rate: 0 }],
   })
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch =
-      invoice.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  useEffect(() => {
+    fetchInvoices()
+    fetchProjects()
+  }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DRAFT":
-        return "bg-gray-100 text-gray-800"
-      case "SENT":
-        return "bg-blue-100 text-blue-800"
-      case "PAID":
-        return "bg-green-100 text-green-800"
-      case "OVERDUE":
-        return "bg-red-100 text-red-800"
-      case "CANCELLED":
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const fetchInvoices = async () => {
+    try {
+      const response = await fetch("/api/invoices")
+      if (response.ok) {
+        const data = await response.json()
+        setInvoices(data.invoices)
+      }
+    } catch (error) {
+      console.error("Error fetching invoices:", error)
+      toast.error("Failed to fetch invoices")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleCreateInvoice = () => {
-    // Calculate amounts
-    const subtotal = formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0)
-    const taxAmount = subtotal * (formData.taxRate / 100)
-    const total = subtotal + taxAmount
-
-    const selectedClient = clients.find((c) => c.id === formData.clientId)
-    const selectedProject = projects.find((p) => p.id === formData.projectId)
-
-    const newInvoice: Invoice = {
-      id: Date.now().toString(),
-      invoiceNumber: `INV-${String(invoices.length + 1).padStart(3, "0")}`,
-      title: formData.title,
-      client: selectedClient!,
-      project: selectedProject,
-      status: "DRAFT",
-      amount: subtotal,
-      taxAmount,
-      totalAmount: total,
-      dueDate: formData.dueDate,
-      createdAt: new Date().toISOString().split("T")[0],
-      items: formData.items.map((item, index) => ({
-        id: index.toString(),
-        description: item.description,
-        quantity: item.quantity,
-        rate: item.rate,
-        amount: item.quantity * item.rate,
-      })),
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch("/api/projects")
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data.projects)
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
     }
+  }
 
-    setInvoices([...invoices, newInvoice])
-    setIsCreateDialogOpen(false)
+  const handleCreateInvoice = async () => {
+    try {
+      const response = await fetch("/api/invoices", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (response.ok) {
+        toast.success("Invoice created successfully")
+        setIsCreateDialogOpen(false)
+        fetchInvoices()
+        resetForm()
+      } else {
+        toast.error("Failed to create invoice")
+      }
+    } catch (error) {
+      console.error("Error creating invoice:", error)
+      toast.error("Failed to create invoice")
+    }
+  }
+
+  const generatePDF = (invoice: Invoice) => {
+    const doc = new jsPDF()
+
+    // Header
+    doc.setFontSize(20)
+    doc.text("INVOICE", 20, 30)
+
+    // Invoice details
+    doc.setFontSize(12)
+    doc.text(`Invoice #: ${invoice.invoiceNumber}`, 20, 50)
+    doc.text(`Date: ${new Date(invoice.createdAt).toLocaleDateString()}`, 20, 60)
+    doc.text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}`, 20, 70)
+
+    // Client details
+    doc.text("Bill To:", 20, 90)
+    doc.text(invoice.clientName, 20, 100)
+    doc.text(`Project: ${invoice.projectName}`, 20, 110)
+
+    // Items table
+    let yPosition = 140
+    doc.text("Description", 20, yPosition)
+    doc.text("Qty", 120, yPosition)
+    doc.text("Rate", 140, yPosition)
+    doc.text("Amount", 160, yPosition)
+
+    yPosition += 10
+    doc.line(20, yPosition, 190, yPosition)
+    yPosition += 10
+
+    invoice.items.forEach((item) => {
+      doc.text(item.description, 20, yPosition)
+      doc.text(item.quantity.toString(), 120, yPosition)
+      doc.text(`$${item.rate.toFixed(2)}`, 140, yPosition)
+      doc.text(`$${item.amount.toFixed(2)}`, 160, yPosition)
+      yPosition += 10
+    })
+
+    // Total
+    yPosition += 10
+    doc.line(20, yPosition, 190, yPosition)
+    yPosition += 10
+    doc.setFontSize(14)
+    doc.text(`Total: $${invoice.amount.toFixed(2)}`, 140, yPosition)
+
+    doc.save(`invoice-${invoice.invoiceNumber}.pdf`)
+  }
+
+  const resetForm = () => {
     setFormData({
-      title: "",
-      clientId: "",
       projectId: "",
       dueDate: "",
-      taxRate: 10,
+      notes: "",
       items: [{ description: "", quantity: 1, rate: 0 }],
     })
-    toast.success("Invoice created successfully!")
   }
 
-  const addInvoiceItem = () => {
+  const addItem = () => {
     setFormData({
       ...formData,
       items: [...formData.items, { description: "", quantity: 1, rate: 0 }],
     })
   }
 
-  const updateInvoiceItem = (index: number, field: string, value: any) => {
-    const updatedItems = formData.items.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+  const updateItem = (index: number, field: string, value: any) => {
+    const updatedItems = formData.items.map((item, i) => {
+      if (i === index) {
+        return { ...item, [field]: value }
+      }
+      return item
+    })
     setFormData({ ...formData, items: updatedItems })
   }
 
-  const removeInvoiceItem = (index: number) => {
-    if (formData.items.length > 1) {
-      const updatedItems = formData.items.filter((_, i) => i !== index)
-      setFormData({ ...formData, items: updatedItems })
+  const removeItem = (index: number) => {
+    const updatedItems = formData.items.filter((_, i) => i !== index)
+    setFormData({ ...formData, items: updatedItems })
+  }
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch =
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-800"
+      case "sent":
+        return "bg-blue-100 text-blue-800"
+      case "paid":
+        return "bg-green-100 text-green-800"
+      case "overdue":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
   }
 
-  const handleViewInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice)
-    setIsViewDialogOpen(true)
-  }
-
-  const handleDownloadPDF = (invoice: Invoice) => {
-    // In a real app, this would generate and download a PDF
-    toast.success(`PDF for ${invoice.invoiceNumber} downloaded!`)
-  }
-
-  const handleUpdateStatus = (invoiceId: string, newStatus: string) => {
-    setInvoices(invoices.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus as any } : inv)))
-    toast.success("Invoice status updated!")
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading...</div>
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-muted-foreground">Manage and generate invoices for your projects</p>
+          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
+          <p className="text-muted-foreground">Manage your project invoices and billing</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4 mr-2" />
               Create Invoice
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Invoice</DialogTitle>
-              <DialogDescription>Generate a new invoice for your client</DialogDescription>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Invoice Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Enter invoice title"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client">Client</Label>
-                  <Select
-                    value={formData.clientId}
-                    onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name} - {client.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project">Project (Optional)</Label>
+                <div>
+                  <Label htmlFor="project">Project</Label>
                   <Select
                     value={formData.projectId}
                     onValueChange={(value) => setFormData({ ...formData, projectId: value })}
@@ -334,103 +250,77 @@ export default function InvoicesPage() {
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects
-                        .filter((project) => project.clientId === formData.clientId)
-                        .map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name} - {project.clientName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Invoice Items</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addInvoiceItem}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Item
-                  </Button>
+              <div>
+                <Label>Invoice Items</Label>
+                <div className="space-y-2">
+                  {formData.items.map((item, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-5">
+                        <Input
+                          placeholder="Description"
+                          value={item.description}
+                          onChange={(e) => updateItem(index, "description", e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="Qty"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, "quantity", Number.parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="Rate"
+                          value={item.rate}
+                          onChange={(e) => updateItem(index, "rate", Number.parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input value={`$${(item.quantity * item.rate).toFixed(2)}`} disabled />
+                      </div>
+                      <div className="col-span-1">
+                        {formData.items.length > 1 && (
+                          <Button variant="outline" size="icon" onClick={() => removeItem(index)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                {formData.items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-5">
-                      <Label>Description</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateInvoiceItem(index, "description", e.target.value)}
-                        placeholder="Item description"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Quantity</Label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateInvoiceItem(index, "quantity", Number.parseFloat(e.target.value) || 0)}
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Rate</Label>
-                      <Input
-                        type="number"
-                        value={item.rate}
-                        onChange={(e) => updateInvoiceItem(index, "rate", Number.parseFloat(e.target.value) || 0)}
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Amount</Label>
-                      <Input value={`$${(item.quantity * item.rate).toFixed(2)}`} disabled />
-                    </div>
-                    <div className="col-span-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => removeInvoiceItem(index)}
-                        disabled={formData.items.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <Button variant="outline" onClick={addItem} className="mt-2 bg-transparent">
+                  Add Item
+                </Button>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                  <Input
-                    id="taxRate"
-                    type="number"
-                    value={formData.taxRate}
-                    onChange={(e) => setFormData({ ...formData, taxRate: Number.parseFloat(e.target.value) || 0 })}
-                    min="0"
-                    max="100"
-                    step="0.1"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Subtotal</Label>
-                  <Input
-                    value={`$${formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0).toFixed(2)}`}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Total</Label>
-                  <Input
-                    value={`$${(formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0) * (1 + formData.taxRate / 100)).toFixed(2)}`}
-                    disabled
-                  />
-                </div>
+              <div>
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  placeholder="Additional notes..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -445,9 +335,9 @@ export default function InvoicesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search invoices..."
             value={searchTerm}
@@ -456,180 +346,67 @@ export default function InvoicesPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="DRAFT">Draft</SelectItem>
-            <SelectItem value="SENT">Sent</SelectItem>
-            <SelectItem value="PAID">Paid</SelectItem>
-            <SelectItem value="OVERDUE">Overdue</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Invoices Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
-          <CardDescription>A list of all invoices including their status and amounts.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                  <TableCell>{invoice.title}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{invoice.client.name}</div>
-                      <div className="text-sm text-muted-foreground">{invoice.client.company}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
-                  </TableCell>
-                  <TableCell>${invoice.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleViewInvoice(invoice)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDownloadPDF(invoice)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Select onValueChange={(value) => handleUpdateStatus(invoice.id, value)}>
-                        <SelectTrigger className="w-24 h-8">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="DRAFT">Draft</SelectItem>
-                          <SelectItem value="SENT">Sent</SelectItem>
-                          <SelectItem value="PAID">Paid</SelectItem>
-                          <SelectItem value="OVERDUE">Overdue</SelectItem>
-                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* View Invoice Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedInvoice && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Invoice {selectedInvoice.invoiceNumber}</DialogTitle>
-                <DialogDescription>Invoice details and line items</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6">
-                {/* Invoice Header */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Bill To:</h3>
-                    <div className="space-y-1">
-                      <p className="font-medium">{selectedInvoice.client.name}</p>
-                      <p className="text-sm text-muted-foreground">{selectedInvoice.client.company}</p>
-                      <p className="text-sm text-muted-foreground">{selectedInvoice.client.email}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-sm text-muted-foreground">Invoice Date: </span>
-                        <span>{new Date(selectedInvoice.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-sm text-muted-foreground">Due Date: </span>
-                        <span>{new Date(selectedInvoice.dueDate).toLocaleDateString()}</span>
-                      </div>
-                      <div>
-                        <Badge className={getStatusColor(selectedInvoice.status)}>{selectedInvoice.status}</Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Invoice Items */}
+      {/* Invoices Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredInvoices.map((invoice) => (
+          <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold mb-4">Items</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Rate</TableHead>
-                        <TableHead>Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedInvoice.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>${item.rate.toFixed(2)}</TableCell>
-                          <TableCell>${item.amount.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <CardTitle className="text-lg">{invoice.invoiceNumber}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{invoice.clientName}</p>
                 </div>
-
-                {/* Invoice Totals */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-end">
-                    <div className="w-64 space-y-2">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>${selectedInvoice.amount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Tax:</span>
-                        <span>${selectedInvoice.taxAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span>${selectedInvoice.totalAmount.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                    Close
+                <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-sm">
+                  <span className="font-medium">Project:</span> {invoice.projectName}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Amount:</span> ${invoice.amount.toFixed(2)}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Due:</span> {new Date(invoice.dueDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => generatePDF(invoice)}>
+                    <Download className="h-4 w-4" />
                   </Button>
-                  <Button onClick={() => handleDownloadPDF(selectedInvoice)}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredInvoices.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No invoices found</p>
+        </div>
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@headlessui/react": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "latest",
     "@radix-ui/react-accordion": "latest",
@@ -55,6 +56,7 @@
     "helmet": "latest",
     "input-otp": "latest",
     "jsonwebtoken": "latest",
+    "jspdf": "latest",
     "lucide-react": "^0.454.0",
     "mysql2": "latest",
     "next": "15.2.4",

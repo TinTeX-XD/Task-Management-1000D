@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "TaskFlow - Project Management System",
-  description: "A comprehensive task management and project collaboration platform",
+  description: "A comprehensive Jira-like task management system with invoicing and team collaboration",
     generator: 'v0.dev'
 }
 

@@ -1,123 +1,130 @@
-# Jira-like Task Management System
+# 🚀 Jira-like Task Management System
 
-A comprehensive task management web application built with Next.js, featuring project management, Kanban boards, team collaboration, and invoice generation.
+A comprehensive project management system built with Next.js, Firebase, and modern web technologies. Features include task management, Kanban boards, invoice generation, team collaboration, and WhatsApp Business API integration.
 
-## 🚀 Features
+## ✨ Features
 
-- **Authentication**: Firebase Auth with email/password login
-- **Project Management**: Create, edit, and manage projects with client assignments
-- **Kanban Board**: Drag-and-drop task management with status columns
-- **Task Management**: Detailed task creation with assignees, priorities, and due dates
-- **Team Collaboration**: Team member management and assignment
-- **Client Management**: Client profiles and project associations
-- **Invoice Generation**: Automated invoice creation based on project tasks
-- **WhatsApp Integration**: Task notifications and updates via WhatsApp
-- **GitHub Integration**: Link tasks to GitHub branches and commits
-- **Responsive Design**: Modern UI with dark/light theme support
-- **Real-time Updates**: Live task status updates and notifications
+- **🔐 Authentication**: Firebase Auth with email/password
+- **📋 Project Management**: Create and manage projects with client associations
+- **📝 Task Management**: Kanban board with drag-and-drop functionality
+- **💰 Invoice Generator**: Create, manage, and export invoices as PDF
+- **👥 Team Collaboration**: User roles and permissions
+- **📱 WhatsApp Integration**: Automated notifications via WhatsApp Business API
+- **🔗 GitHub Integration**: Link tasks to Git branches
+- **🌙 Dark Mode**: Full dark/light theme support
+- **📱 Responsive Design**: Works on all devices
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **Next.js 14** with App Router
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
-- **shadcn/ui** for UI components
-- **Firebase Auth** for authentication
-- **React DnD** for drag-and-drop functionality
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: MySQL/PostgreSQL
+- **Authentication**: Firebase Auth
+- **UI Components**: shadcn/ui
+- **PDF Generation**: jsPDF
+- **Drag & Drop**: @dnd-kit/core
+- **Notifications**: WhatsApp Business API
 
-### Backend
-- **Next.js API Routes** for serverless functions
-- **Prisma ORM** with MySQL database
-- **Firebase Admin SDK** for server-side auth
-- **WhatsApp Business API** for notifications
-- **Swagger** for API documentation
+## 🚀 Quick Start
 
-## 📋 Prerequisites
+### Prerequisites
 
-Before you begin, ensure you have the following installed:
-- Node.js (v18 or higher)
-- npm or yarn
-- MySQL database
+- Node.js 18+ and npm
+- MySQL or PostgreSQL database
 - Firebase project
-- WhatsApp Business Account (optional)
+- WhatsApp Business API access
 
-## 🔧 Installation & Setup
+### Installation
 
-### 1. Clone the Repository
+1. **Clone the repository**
+   \`\`\`bash
+   git clone https://github.com/yourusername/task-management-system.git
+   cd task-management-system
+   \`\`\`
 
-\`\`\`bash
-git clone <your-repository-url>
-cd task-management-system
-\`\`\`
+2. **Install dependencies**
+   \`\`\`bash
+   npm install
+   \`\`\`
 
-### 2. Install Dependencies
+3. **Environment setup**
+   \`\`\`bash
+   cp .env.example .env.local
+   \`\`\`
+   
+   Fill in your environment variables in `.env.local`:
 
-\`\`\`bash
-npm install
-# or
-yarn install
-\`\`\`
+4. **Database setup**
+   \`\`\`bash
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+   \`\`\`
 
-### 3. Environment Configuration
+5. **Run development server**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-Copy the example environment file and configure your variables:
+6. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
-\`\`\`bash
-cp .env.example .env.local
-\`\`\`
+## 🔧 Configuration
 
-Edit `.env.local` with your actual configuration values:
+### Firebase Setup
 
-#### Firebase Setup
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project or select existing one
-3. Enable Authentication with Email/Password
-4. Generate a new private key for Admin SDK
-5. Copy the configuration values to your `.env.local`
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
+2. Enable Authentication with Email/Password
+3. Get your Firebase config and add to `.env.local`
+4. Generate a service account key for admin operations
 
-#### Database Setup
-1. Create a MySQL database
-2. Update the `DATABASE_URL` in `.env.local`
-3. Run database migrations:
+### WhatsApp Business API Setup
 
-\`\`\`bash
-npx prisma generate
-npx prisma db push
-\`\`\`
+1. Create a Meta Business account
+2. Set up WhatsApp Business API
+3. Get your access token and phone number ID
+4. Add webhook URL for receiving messages
+5. Configure environment variables
 
-#### WhatsApp Business API (Optional)
-1. Set up WhatsApp Business API through Meta
-2. Get your access token and phone number ID
-3. Configure webhook URL for receiving updates
+### Database Configuration
 
-### 4. Database Migration
-
-\`\`\`bash
-# Generate Prisma client
-npx prisma generate
-
-# Push database schema
-npx prisma db push
-
-# Seed database with sample data (optional)
-npx prisma db seed
-\`\`\`
-
-### 5. Run the Development Server
+The system supports both MySQL and PostgreSQL. Update your `DATABASE_URL` in `.env.local`:
 
 \`\`\`bash
-npm run dev
-# or
-yarn dev
+# For MySQL
+DATABASE_URL="mysql://username:password@localhost:3306/task_management"
+
+# For PostgreSQL
+DATABASE_URL="postgresql://username:password@localhost:5432/task_management"
 \`\`\`
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+## 📱 WhatsApp Integration
 
-## 📚 API Documentation
+The system uses WhatsApp Business API to send notifications for:
+- Task assignments
+- Project updates
+- Invoice reminders
+- Deadline alerts
 
-Once the server is running, you can access the Swagger API documentation at:
-[http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+### Setting up WhatsApp Business API
+
+1. **Create Meta Business Account**
+   - Go to [Meta Business](https://business.facebook.com)
+   - Create a business account
+
+2. **Set up WhatsApp Business API**
+   - Navigate to WhatsApp Business API
+   - Add your phone number
+   - Verify your business
+
+3. **Get API Credentials**
+   - Access Token
+   - Phone Number ID
+   - Webhook Verify Token
+
+4. **Configure Webhook**
+   - Set webhook URL to: `https://yourdomain.com/api/webhooks/whatsapp`
+   - Add verify token from your environment variables
 
 ## 🏗️ Project Structure
 
@@ -125,151 +132,125 @@ Once the server is running, you can access the Swagger API documentation at:
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   ├── dashboard/         # Dashboard pages
-│   ├── projects/          # Project management pages
-│   ├── tasks/             # Task management pages
-│   ├── invoices/          # Invoice generation pages
-│   └── login/             # Authentication pages
-├── components/            # Reusable UI components
+│   ├── projects/          # Project management
+│   ├── tasks/             # Task management
+│   ├── invoices/          # Invoice generator
+│   └── login/             # Authentication
+├── components/            # Reusable components
 │   ├── ui/               # shadcn/ui components
-│   └── ...               # Custom components
-├── lib/                   # Utility functions and configurations
-├── prisma/               # Database schema and migrations
-├── types/                # TypeScript type definitions
-└── contexts/             # React contexts
+│   ├── layout/           # Layout components
+│   └── features/         # Feature-specific components
+├── lib/                  # Utility functions
+├── hooks/                # Custom React hooks
+├── contexts/             # React contexts
+├── prisma/               # Database schema
+└── public/               # Static assets
 \`\`\`
 
-## 🔐 Authentication
+## 🔐 Authentication & Authorization
 
-The application uses Firebase Authentication with the following features:
-- Email/password login and registration
-- Protected routes with middleware
-- JWT token validation on API routes
-- Persistent login state with local storage
+The system implements role-based access control:
 
-## 📊 Database Schema
+- **Admin**: Full system access
+- **Project Manager**: Manage assigned projects
+- **Team Member**: Access assigned tasks
+- **Client**: View project progress
 
-The application uses the following main entities:
-- **Users**: User profiles and authentication
-- **Projects**: Project information and client associations
-- **Tasks**: Task details with status, priority, and assignments
-- **Clients**: Client information and contact details
-- **Invoices**: Generated invoices based on project work
-- **WhatsApp Logs**: Message delivery tracking
+## 📊 API Documentation
 
-## 🎨 UI Components
+### Authentication Endpoints
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/logout` - User logout
 
-Built with shadcn/ui components including:
-- Responsive sidebar navigation
-- Kanban board with drag-and-drop
-- Task detail drawer
-- Project cards with status indicators
-- Invoice generation forms
-- Dark/light theme toggle
+### Project Endpoints
+- `GET /api/projects` - List projects
+- `POST /api/projects` - Create project
+- `GET /api/projects/[id]` - Get project details
+- `PUT /api/projects/[id]` - Update project
+- `DELETE /api/projects/[id]` - Delete project
 
-## 📱 WhatsApp Integration
+### Task Endpoints
+- `GET /api/tasks` - List tasks
+- `POST /api/tasks` - Create task
+- `PUT /api/tasks/[id]` - Update task
+- `DELETE /api/tasks/[id]` - Delete task
 
-Configure WhatsApp notifications for:
-- Task assignments
-- Status updates
-- Project deadlines
-- Invoice generation alerts
-
-## 💰 Invoice Generation
-
-Features include:
-- Automatic invoice creation from project tasks
-- Customizable invoice templates
-- PDF export functionality
-- Client billing information
-- Time tracking integration
+### Invoice Endpoints
+- `GET /api/invoices` - List invoices
+- `POST /api/invoices` - Create invoice
+- `GET /api/invoices/[id]/pdf` - Generate PDF
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Vercel Deployment
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Configure environment variables in Vercel dashboard
-4. Deploy automatically on push
+1. **Connect to Vercel**
+   \`\`\`bash
+   npm i -g vercel
+   vercel
+   \`\`\`
 
-### Manual Deployment
+2. **Set Environment Variables**
+   Add all environment variables in Vercel dashboard
+
+3. **Configure Database**
+   Set up your production database and update `DATABASE_URL`
+
+### Docker Deployment
 
 \`\`\`bash
-# Build the application
-npm run build
+# Build the image
+docker build -t task-management .
 
-# Start production server
-npm start
+# Run the container
+docker run -p 3000:3000 --env-file .env.local task-management
 \`\`\`
 
-## 🔧 Configuration
+## 🧪 Testing
 
-### Firebase Configuration
-- Enable Authentication with Email/Password provider
-- Set up Firestore rules for data security
-- Configure Firebase Admin SDK for server-side operations
+\`\`\`bash
+# Run tests
+npm test
 
-### Database Configuration
-- Ensure MySQL server is running
-- Configure connection pooling for production
-- Set up regular backups
+# Run tests in watch mode
+npm run test:watch
 
-### WhatsApp Configuration
-- Verify webhook URL with Meta
-- Configure message templates
-- Set up proper error handling
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Firebase Authentication Error**
-   - Verify API keys in `.env.local`
-   - Check Firebase project configuration
-   - Ensure authentication is enabled
-
-2. **Database Connection Error**
-   - Verify MySQL server is running
-   - Check DATABASE_URL format
-   - Ensure database exists
-
-3. **WhatsApp Webhook Issues**
-   - Verify webhook URL is accessible
-   - Check verify token configuration
-   - Review Meta Developer Console logs
+# Run e2e tests
+npm run test:e2e
+\`\`\`
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the API documentation at `/api/docs`
-- Review the troubleshooting section above
+If you encounter any issues or have questions:
 
-## 🔄 Updates
+1. Check the [Issues](https://github.com/yourusername/task-management-system/issues) page
+2. Create a new issue with detailed information
+3. Join our [Discord community](https://discord.gg/yourinvite)
 
-To update the application:
+## 🙏 Acknowledgments
 
-\`\`\`bash
-# Pull latest changes
-git pull origin main
+- [Next.js](https://nextjs.org/) for the amazing framework
+- [Firebase](https://firebase.google.com/) for authentication and hosting
+- [shadcn/ui](https://ui.shadcn.com/) for beautiful UI components
+- [Prisma](https://prisma.io/) for database management
+- [Tailwind CSS](https://tailwindcss.com/) for styling
 
-# Install new dependencies
-npm install
+---
 
-# Update database schema
-npx prisma db push
+Made with ❤️ by [Your Name](https://github.com/yourusername)
+\`\`\`
 
-# Restart the application
-npm run dev
+Now let's create the complete Firebase configuration:
